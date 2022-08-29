@@ -30,8 +30,7 @@ class IDLossModel(nn.Module):
             x = self.pool(x)
         x = x[:, :, 35:223, 32:220]  # Crop interesting region
         x = self.face_pool(x)
-        x_feats = self.facenet(x)
-        return x_feats
+        return self.facenet(x)
 
     def forward(self, pred=None, gt=None):
         n_samples = gt.shape[0]

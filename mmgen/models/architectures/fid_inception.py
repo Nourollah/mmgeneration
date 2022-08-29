@@ -73,7 +73,7 @@ class InceptionV3(nn.Module):
         self.last_needed_block = max(output_blocks)
 
         assert self.last_needed_block <= 3, \
-            'Last possible output block index is 3'
+                'Last possible output block index is 3'
 
         self.blocks = nn.ModuleList()
 

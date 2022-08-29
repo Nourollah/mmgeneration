@@ -84,8 +84,7 @@ def parse_args():
         nargs='+',
         action=DictAction,
         help='Other customized kwargs for sampling function')
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 @torch.no_grad()
@@ -114,18 +113,17 @@ def batch_inference(generator,
             batch.
     """
     # split noise into groups
-    if noise is not None:
-        if isinstance(noise, torch.Tensor):
-            num_batches = noise.shape[0]
-            noise_group = torch.split(noise, max_batch_size, 0)
-        else:
-            num_batches = noise[0].shape[0]
-            noise_group = torch.split(noise[0], max_batch_size, 0)
-            noise_group = [[noise_tensor] for noise_tensor in noise_group]
-    else:
+    if noise is None:
         noise_group = [None] * (
             num_batches // max_batch_size +
             (1 if num_batches % max_batch_size > 0 else 0))
+    elif isinstance(noise, torch.Tensor):
+        num_batches = noise.shape[0]
+        noise_group = torch.split(noise, max_batch_size, 0)
+    else:
+        num_batches = noise[0].shape[0]
+        noise_group = torch.split(noise[0], max_batch_size, 0)
+        noise_group = [[noise_tensor] for noise_tensor in noise_group]
     # split batchsize into groups
     batchsize_group = [max_batch_size] * (num_batches // max_batch_size)
     if num_batches % max_batch_size > 0:
@@ -178,7 +176,7 @@ def layout_grid(video_out,
                               img_w).permute(1, 0, 2, 3, 4).reshape(
                                   n_frames, images_per_frame, channels, img_h,
                                   img_w)
-    for i in range(0, n_frames):
+    for i in range(n_frames):
         img = all_img[i]
         if float_to_uint8:
             img = (img * 255.).clamp(0, 255).to(torch.uint8)

@@ -31,8 +31,7 @@ def l2_norm(input, axis=1):
         Tensor: Tensor after L2 normalization per-instance.
     """
     norm = torch.norm(input, 2, axis, True)
-    output = torch.div(input, norm)
-    return output
+    return torch.div(input, norm)
 
 
 class Bottleneck(namedtuple('Block', ['in_channel', 'depth', 'stride'])):
@@ -51,8 +50,9 @@ def get_block(in_channel, depth, num_units, stride=2):
     Returns:
         list: A list of unit modules' config.
     """
-    return [Bottleneck(in_channel, depth, stride)
-            ] + [Bottleneck(depth, depth, 1) for i in range(num_units - 1)]
+    return [Bottleneck(in_channel, depth, stride)] + [
+        Bottleneck(depth, depth, 1) for _ in range(num_units - 1)
+    ]
 
 
 def get_blocks(num_layers):
@@ -90,8 +90,9 @@ def get_blocks(num_layers):
         ]
     else:
         raise ValueError(
-            'Invalid number of layers: {}. Must be one of [50, 100, 152]'.
-            format(num_layers))
+            f'Invalid number of layers: {num_layers}. Must be one of [50, 100, 152]'
+        )
+
     return blocks
 
 

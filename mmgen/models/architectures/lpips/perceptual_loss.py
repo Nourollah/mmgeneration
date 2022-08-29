@@ -49,7 +49,7 @@ class PerceptualLoss(torch.nn.Module):
             lpips=True)
 
         if pretrained:
-            print('Loading model from: %s' % LPIPS_WEIGHTS_URL)
+            print(f'Loading model from: {LPIPS_WEIGHTS_URL}')
             self.net.load_state_dict(
                 load_url(LPIPS_WEIGHTS_URL, map_location='cpu', progress=True),
                 strict=False)

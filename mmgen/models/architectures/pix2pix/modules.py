@@ -165,8 +165,4 @@ class UnetSkipConnectionBlock(nn.Module):
         Returns:
             Tensor: Forward results.
         """
-        if self.is_outermost:
-            return self.model(x)
-
-        # add skip connections
-        return torch.cat([x, self.model(x)], 1)
+        return self.model(x) if self.is_outermost else torch.cat([x, self.model(x)], 1)

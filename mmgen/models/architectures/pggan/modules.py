@@ -50,7 +50,7 @@ class EqualizedLR:
         Returns:
             torch.Tensor: Updated weight.
         """
-        weight = getattr(module, self.name + '_orig')
+        weight = getattr(module, f'{self.name}_orig')
         if weight.ndim == 5:
             # weight in shape of [b, out, in, k, k]
             fan = _calculate_correct_fan(weight[0], self.mode)
@@ -95,7 +95,7 @@ class EqualizedLR:
         weight = module._parameters[name]
 
         delattr(module, name)
-        module.register_parameter(name + '_orig', weight)
+        module.register_parameter(f'{name}_orig', weight)
 
         # We still need to assign weight back as fn.name because all sorts of
         # things may assume that it exists, e.g., when initializing weights.
@@ -397,7 +397,7 @@ class PGGANNoiseTo2DFeat(nn.Module):
         self.with_activation = act_cfg is not None
         self.with_norm = norm_cfg is not None
         self.order = order
-        assert len(order) == 3 and set(order) == set(['linear', 'act', 'norm'])
+        assert len(order) == 3 and set(order) == {'linear', 'act', 'norm'}
 
         # w/o bias, because the bias is added after reshaping the tensor to
         # 2D feature
@@ -462,10 +462,7 @@ class PGGANDecisionHead(nn.Module):
 
         # setup linear layers
         # dirty code for supporting default mode in PGGAN
-        if equalized_lr_cfg:
-            equalized_lr_cfg_ = dict(gain=2**0.5)
-        else:
-            equalized_lr_cfg_ = None
+        equalized_lr_cfg_ = dict(gain=2**0.5) if equalized_lr_cfg else None
         self.linear0 = EqualizedLRLinearModule(
             self.in_channels,
             self.mid_channels,

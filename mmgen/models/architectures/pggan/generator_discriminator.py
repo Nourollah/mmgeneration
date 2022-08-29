@@ -73,8 +73,8 @@ class PGGANGenerator(nn.Module):
                  fused_upconv_cfg=None,
                  upsample_cfg=None):
         super().__init__()
-        self.noise_size = noise_size if noise_size else min(
-            base_channels, max_channels)
+        self.noise_size = noise_size or min(base_channels, max_channels)
+
         self.out_scale = out_scale
         self.out_log2_scale = int(np.log2(out_scale))
         # sanity check for the output scale
@@ -142,25 +142,25 @@ class PGGANGenerator(nn.Module):
                 EqualizedLRConvModule(in_channels,
                                       self._num_out_channels(log_scale - 1),
                                       **self.conv_module_cfg))
-        # 8x8 --> 1024x1024 scales
         else:
             if self.fused_upconv:
                 cfg_ = dict(upsample=dict(type='fused_nn'))
-                cfg_.update(self.fused_upconv_cfg)
+                cfg_ |= self.fused_upconv_cfg
             else:
                 cfg_ = dict(upsample=self.upsample_cfg)
-                cfg_.update(self.conv_module_cfg)
-            # up + conv
-            modules.append(
-                EqualizedLRConvUpModule(in_channels,
-                                        self._num_out_channels(log_scale - 1),
-                                        **cfg_))
-            # refine conv
-            modules.append(
-                EqualizedLRConvModule(
-                    self._num_out_channels(log_scale - 1),
-                    self._num_out_channels(log_scale - 1),
-                    **self.conv_module_cfg))
+                cfg_ |= self.conv_module_cfg
+            modules.extend(
+                (
+                    EqualizedLRConvUpModule(
+                        in_channels, self._num_out_channels(log_scale - 1), **cfg_
+                    ),
+                    EqualizedLRConvModule(
+                        self._num_out_channels(log_scale - 1),
+                        self._num_out_channels(log_scale - 1),
+                        **self.conv_module_cfg
+                    ),
+                )
+            )
 
         return modules
 
@@ -243,9 +243,8 @@ class PGGANGenerator(nn.Module):
                     out_img - residual_img)
 
         if return_noise:
-            output = dict(
-                fake_img=out_img, noise_batch=noise_batch, label=label)
-            return output
+            return dict(fake_img=out_img, noise_batch=noise_batch, label=label)
+
 
         return out_img
 
@@ -407,10 +406,10 @@ class PGGANDiscriminator(nn.Module):
 
             if self.fused_convdown:
                 cfg_ = dict(downsample=dict(type='fused_pool'))
-                cfg_.update(self.fused_convdown_cfg)
+                cfg_ |= self.fused_convdown_cfg
             else:
                 cfg_ = dict(downsample=self.downsample)
-                cfg_.update(self.conv_module_cfg)
+                cfg_ |= self.conv_module_cfg
             modules.append(
                 EqualizedLRConvDownModule(
                     self._num_out_channels(log2_scale - 1),
@@ -450,7 +449,4 @@ class PGGANDiscriminator(nn.Module):
 
         x = self.decision(x)
 
-        if self.label_size > 0:
-            return x[:, :1], x[:, 1:]
-
-        return x
+        return (x[:, :1], x[:, 1:]) if self.label_size > 0 else x

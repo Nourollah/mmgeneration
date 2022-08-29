@@ -95,7 +95,7 @@ class PickleDataHook(Hook):
             pickle.dump(data_dict, f)
             mmcv.print_log(f'Pickle data in {filename}', 'mmgen')
 
-            if len(not_find_keys) > 0:
+            if not_find_keys:
                 mmcv.print_log(
                     f'Cannot find keys for pickling: {not_find_keys}',
                     'mmgen',
@@ -106,7 +106,4 @@ class PickleDataHook(Hook):
         if isinstance(data, list):
             return [self._get_numpy_data(x) for x in data]
 
-        if isinstance(data, torch.Tensor):
-            return data.cpu().numpy()
-
-        return data
+        return data.cpu().numpy() if isinstance(data, torch.Tensor) else data

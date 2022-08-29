@@ -90,8 +90,7 @@ def parse_args():
         action=DictAction,
         help='Other customized kwargs for sampling function')
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def main():
@@ -124,9 +123,11 @@ def main():
         proj_file = torch.load(args.proj_latent)
         proj_n = len(proj_file)
         assert proj_n == 1
-        noise_batch = []
-        for img_path in proj_file:
-            noise_batch.append(proj_file[img_path]['latent'].unsqueeze(0))
+        noise_batch = [
+            proj_file[img_path]['latent'].unsqueeze(0)
+            for img_path in proj_file
+        ]
+
         latent_code_init = torch.cat(noise_batch, dim=0).cuda()
     elif args.mode == 'edit':
         latent_code_init_not_trunc = torch.randn(1, 512).cuda()
@@ -167,11 +168,7 @@ def main():
         # clip loss
         c_loss = clip_loss(image=img_gen, text=text_inputs)
 
-        if args.id_lambda > 0:
-            i_loss = id_loss(pred=img_gen, gt=img_orig)[0]
-        else:
-            i_loss = 0
-
+        i_loss = id_loss(pred=img_gen, gt=img_orig)[0] if args.id_lambda > 0 else 0
         if args.mode == 'edit':
             l2_loss = ((latent_code_init - latent)**2).sum()
             loss = c_loss + args.l2_lambda * l2_loss + args.id_lambda * i_loss

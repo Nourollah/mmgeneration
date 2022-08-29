@@ -126,7 +126,7 @@ class GenerativeEvalHook(Hook):
         assert metrics is not None
         self.dataloader = dataloader
         self.dist = dist
-        self.sample_kwargs = sample_kwargs if sample_kwargs else dict()
+        self.sample_kwargs = sample_kwargs or {}
         self.save_best_ckpt = save_best_ckpt
         self.best_metric = best_metric
 
@@ -135,10 +135,9 @@ class GenerativeEvalHook(Hook):
         elif isinstance(interval, dict):
             if 'milestones' not in interval or 'interval' not in interval:
                 raise KeyError(
-                    '`milestones` and `interval` must exist in interval dict '
-                    'if you want to use the dynamic interval evaluation '
-                    f'strategy. But receive [{[k for k in interval.keys()]}] '
-                    'in the interval dict.')
+                    f'`milestones` and `interval` must exist in interval dict if you want to use the dynamic interval evaluation strategy. But receive [{list(interval.keys())}] in the interval dict.'
+                )
+
 
             self.milestones = interval['milestones']
             self.interval = interval['interval']
@@ -182,10 +181,7 @@ class GenerativeEvalHook(Hook):
             self._curr_best_score = {}
             self._curr_best_ckpt_path = {}
             for name in self.best_metric:
-                if name in self.greater_keys:
-                    self.rule[name] = 'greater'
-                else:
-                    self.rule[name] = 'less'
+                self.rule[name] = 'greater' if name in self.greater_keys else 'less'
                 self.compare_func[name] = self.rule_map[self.rule[name]]
                 self._curr_best_score[name] = self.init_value_map[
                     self.rule[name]]
@@ -199,10 +195,9 @@ class GenerativeEvalHook(Hook):
         """
         if isinstance(self.interval, int):
             return self.interval
-        else:
-            curr_iter = runner.iter + 1
-            index = bisect_right(self.milestones, curr_iter)
-            return self.interval[index]
+        curr_iter = runner.iter + 1
+        index = bisect_right(self.milestones, curr_iter)
+        return self.interval[index]
 
     def before_run(self, runner):
         """The behavior before running.
@@ -213,8 +208,8 @@ class GenerativeEvalHook(Hook):
         if self.save_best_ckpt is not None:
             if runner.meta is None:
                 warnings.warn('runner.meta is None. Creating an empty one.')
-                runner.meta = dict()
-            runner.meta.setdefault('hook_msgs', dict())
+                runner.meta = {}
+            runner.meta.setdefault('hook_msgs', {})
 
     def after_train_iter(self, runner):
         """The behavior after each train iteration.
@@ -475,18 +470,15 @@ class TranslationEvalHook(GenerativeEvalHook):
 
         # feed in fake images
         for data in self.dataloader:
-            # key for translation model
-            if f'img_{source_domain}' in data:
-                with torch.no_grad():
-                    output_dict = runner.model(
-                        data[f'img_{source_domain}'],
-                        test_mode=True,
-                        target_domain=self.target_domain,
-                        **self.sample_kwargs)
-                fakes = output_dict['target']
-            # key Error
-            else:
+            if f'img_{source_domain}' not in data:
                 raise KeyError('Cannot found key for images in data_dict. ')
+            with torch.no_grad():
+                output_dict = runner.model(
+                    data[f'img_{source_domain}'],
+                    test_mode=True,
+                    target_domain=self.target_domain,
+                    **self.sample_kwargs)
+            fakes = output_dict['target']
             # sampling fake images and directly send them to metrics
             # pbar update number for one proc
             num_update = 0
@@ -498,9 +490,8 @@ class TranslationEvalHook(GenerativeEvalHook):
                 if num_feed <= 0:
                     break
 
-            if rank == 0:
-                if num_update > 0:
-                    pbar.update(num_update * ws)
+            if rank == 0 and num_update > 0:
+                pbar.update(num_update * ws)
 
         runner.log_buffer.clear()
         # a dirty walkround to change the line at the end of pbar

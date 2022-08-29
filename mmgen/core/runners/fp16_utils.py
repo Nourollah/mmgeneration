@@ -142,11 +142,7 @@ def auto_fp16(apply_to=None, out_fp32=False):
                 return old_func(*args, **kwargs)
 
             # define output type by class itself
-            if hasattr(args[0], 'out_fp32') and args[0].out_fp32:
-                _out_fp32 = True
-            else:
-                _out_fp32 = False
-
+            _out_fp32 = bool(hasattr(args[0], 'out_fp32') and args[0].out_fp32)
             # get the arg spec of the decorated method
             args_info = getfullargspec(old_func)
             # get the argument names to be casted

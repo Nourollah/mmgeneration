@@ -27,11 +27,7 @@ class Crop:
         self.random_crop = random_crop
 
     def _crop(self, data):
-        if not isinstance(data, list):
-            data_list = [data]
-        else:
-            data_list = data
-
+        data_list = data if isinstance(data, list) else [data]
         crop_bbox_list = []
         data_list_ = []
 
@@ -54,9 +50,11 @@ class Crop:
             crop_bbox_list.append(crop_bbox)
             data_list_.append(item_)
 
-        if not isinstance(data, list):
-            return data_list_[0], crop_bbox_list[0]
-        return data_list_, crop_bbox_list
+        return (
+            (data_list_, crop_bbox_list)
+            if isinstance(data, list)
+            else (data_list_[0], crop_bbox_list[0])
+        )
 
     def __call__(self, results):
         """Call function.
@@ -71,7 +69,7 @@ class Crop:
         for k in self.keys:
             data_, crop_bbox = self._crop(results[k])
             results[k] = data_
-            results[k + '_crop_bbox'] = crop_bbox
+            results[f'{k}_crop_bbox'] = crop_bbox
         results['crop_size'] = self.crop_size
         return results
 
@@ -149,7 +147,7 @@ class FixedCrop:
             data_, crop_bbox = self._crop(results[k], x_offset, y_offset,
                                           crop_w, crop_h)
             results[k] = data_
-            results[k + '_crop_bbox'] = crop_bbox
+            results[f'{k}_crop_bbox'] = crop_bbox
         results['crop_size'] = self.crop_size
         results['crop_pos'] = self.crop_pos
         return results

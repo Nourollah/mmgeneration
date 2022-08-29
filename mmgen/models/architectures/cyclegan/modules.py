@@ -71,5 +71,4 @@ class ResidualBlockWithDropout(nn.Module):
         Returns:
             Tensor: Forward results.
         """
-        out = x + self.block(x)
-        return out
+        return x + self.block(x)

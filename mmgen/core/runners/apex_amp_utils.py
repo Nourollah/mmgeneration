@@ -20,17 +20,15 @@ def apex_amp_initialize(models, optimizers, init_args=None, mode='gan'):
     Returns:
         Module, :obj:`Optimizer`: Wrapped module and optimizer.
     """
-    init_args = init_args or dict()
-
-    if mode == 'gan':
-        _optmizers = [optimizers['generator'], optimizers['discriminator']]
-
-        models, _optmizers = amp.initialize(models, _optmizers, **init_args)
-        optimizers['generator'] = _optmizers[0]
-        optimizers['discriminator'] = _optmizers[1]
-
-        return models, optimizers
-
-    else:
+    if mode != 'gan':
         raise NotImplementedError(
             f'Cannot initialize apex.amp with mode {mode}')
+    _optmizers = [optimizers['generator'], optimizers['discriminator']]
+
+    init_args = init_args or {}
+
+    models, _optmizers = amp.initialize(models, _optmizers, **init_args)
+    optimizers['generator'] = _optmizers[0]
+    optimizers['discriminator'] = _optmizers[1]
+
+    return models, optimizers

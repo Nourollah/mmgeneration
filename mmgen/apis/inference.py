@@ -81,9 +81,7 @@ def sample_unconditional_model(model,
             None, num_batches=batches, sample_model=sample_model, **kwargs)
         res_list.append(res.cpu())
 
-    results = torch.cat(res_list, dim=0)
-
-    return results
+    return torch.cat(res_list, dim=0)
 
 
 @torch.no_grad()
@@ -128,18 +126,15 @@ def sample_conditional_model(model,
             # flatten multi tensors
             label = label.view(-1)
     elif isinstance(label, list):
-        if is_list_of(label, int):
-            label = torch.LongTensor(label)
-            # `nargs='+'` parse single integer as list
-            if label.numel() == 1:
-                # repeat single tensor
-                label = label.repeat(num_samples)
-        else:
+        if not is_list_of(label, int):
             raise TypeError('Only support `int` for label list elements, '
                             f'but receive {type(label[0])}')
-    elif label is None:
-        pass
-    else:
+        label = torch.LongTensor(label)
+        # `nargs='+'` parse single integer as list
+        if label.numel() == 1:
+            # repeat single tensor
+            label = label.repeat(num_samples)
+    elif label is not None:
         raise TypeError('Only support `int`, `torch.Tensor`, `list[int]` or '
                         f'None as label, but receive {type(label)}.')
 
@@ -176,9 +171,7 @@ def sample_conditional_model(model,
             **kwargs)
         res_list.append(res.cpu())
 
-    results = torch.cat(res_list, dim=0)
-
-    return results
+    return torch.cat(res_list, dim=0)
 
 
 def sample_img2img_model(model, image_path, target_domain=None, **kwargs):
@@ -204,11 +197,11 @@ def sample_img2img_model(model, image_path, target_domain=None, **kwargs):
     test_pipeline = Compose(cfg.test_pipeline)
 
     # prepare data
-    data = dict()
-    # dirty code to deal with test data pipeline
-    data['pair_path'] = image_path
-    data[f'img_{source_domain}_path'] = image_path
-    data[f'img_{target_domain}_path'] = image_path
+    data = {
+        'pair_path': image_path,
+        f'img_{source_domain}_path': image_path,
+        f'img_{target_domain}_path': image_path,
+    }
 
     data = test_pipeline(data)
     if device.type == 'cpu':
@@ -225,8 +218,7 @@ def sample_img2img_model(model, image_path, target_domain=None, **kwargs):
             test_mode=True,
             target_domain=target_domain,
             **kwargs)
-    output = results['target']
-    return output
+    return results['target']
 
 
 @torch.no_grad()
@@ -288,10 +280,10 @@ def sample_ddpm_model(model,
 
     # gather the res_list
     if isinstance(res_list[0], dict):
-        res_dict = dict()
-        for t in res_list[0].keys():
-            # num_samples x 3 x H x W
-            res_dict[t] = torch.cat([res[t] for res in res_list], dim=0)
-        return res_dict
+        return {
+            t: torch.cat([res[t] for res in res_list], dim=0)
+            for t in res_list[0].keys()
+        }
+
     else:
         return torch.cat(res_list, dim=0)

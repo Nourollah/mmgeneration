@@ -41,8 +41,7 @@ def parse_requirements(filename='requirements.txt', with_version=True):
         if line.startswith('-r '):
             # Allow specifying requirements in other files
             target = line.split(' ')[1]
-            for info in parse_require_file(target):
-                yield info
+            yield from parse_require_file(target)
         else:
             info = {'line': line}
             if line.startswith('-e '):
@@ -74,22 +73,22 @@ def parse_requirements(filename='requirements.txt', with_version=True):
             for line in f.readlines():
                 line = line.strip()
                 if line and not line.startswith('#'):
-                    for info in parse_line(line):
-                        yield info
+                    yield from parse_line(line)
 
     def gen_packages_items():
-        if osp.exists(filename):
-            for info in parse_require_file(filename):
-                parts = [info['package']]
-                if with_version and 'version' in info:
-                    parts.extend(info['version'])
-                if not sys.version.startswith('3.4'):
-                    # apparently package_deps are broken in 3.4
-                    platform_deps = info.get('platform_deps')
-                    if platform_deps is not None:
-                        parts.append(';' + platform_deps)
-                item = ''.join(parts)
-                yield item
+        if not osp.exists(filename):
+            return
+        for info in parse_require_file(filename):
+            parts = [info['package']]
+            if with_version and 'version' in info:
+                parts.extend(info['version'])
+            if not sys.version.startswith('3.4'):
+                # apparently package_deps are broken in 3.4
+                platform_deps = info.get('platform_deps')
+                if platform_deps is not None:
+                    parts.append(f';{platform_deps}')
+            item = ''.join(parts)
+            yield item
 
     packages = list(gen_packages_items())
     return packages
@@ -166,7 +165,6 @@ def add_mim_extension():
                     warnings.warn(f'Cannot copy file {src_path}.')
             else:
                 raise ValueError(f'Invalid mode {mode}')
-    pass
 
 
 if __name__ == '__main__':

@@ -36,8 +36,10 @@ class SNConvModule(ConvModule):
                  **kwargs):
         super().__init__(*args, with_spectral_norm=False, **kwargs)
         self.with_spectral_norm = with_spectral_norm
-        self.spectral_norm_cfg = deepcopy(
-            spectral_norm_cfg) if spectral_norm_cfg else dict()
+        self.spectral_norm_cfg = (
+            deepcopy(spectral_norm_cfg) if spectral_norm_cfg else {}
+        )
+
 
         self.sn_eps = self.spectral_norm_cfg.get('eps', 1e-6)
         self.sn_style = self.spectral_norm_cfg.get('sn_style', 'torch')
@@ -46,12 +48,12 @@ class SNConvModule(ConvModule):
             if self.sn_style == 'torch':
                 self.conv = spectral_norm(self.conv, eps=self.sn_eps)
             elif self.sn_style == 'ajbrock':
-                self.snconv_kwargs = deepcopy(kwargs) if kwargs else dict()
-                if 'act_cfg' in self.snconv_kwargs.keys():
+                self.snconv_kwargs = deepcopy(kwargs) if kwargs else {}
+                if 'act_cfg' in self.snconv_kwargs:
                     self.snconv_kwargs.pop('act_cfg')
-                if 'norm_cfg' in self.snconv_kwargs.keys():
+                if 'norm_cfg' in self.snconv_kwargs:
                     self.snconv_kwargs.pop('norm_cfg')
-                if 'order' in self.snconv_kwargs.keys():
+                if 'order' in self.snconv_kwargs:
                     self.snconv_kwargs.pop('order')
                 self.conv = SNConv2d(
                     *args, **self.snconv_kwargs, eps=self.sn_eps)
@@ -224,10 +226,7 @@ class BigGANConditionBN(nn.Module):
                  auto_sync_bn=True):
         super().__init__()
         assert num_features > 0
-        if linear_input_channels > 0:
-            self.use_cbn = True
-        else:
-            self.use_cbn = False
+        self.use_cbn = linear_input_channels > 0
         # Prepare gain and bias layers
         if self.use_cbn:
             if not input_is_label:
@@ -481,10 +480,7 @@ class BigGANDiscResBlock(nn.Module):
         Returns:
             torch.Tensor: Output feature map tensor.
         """
-        if self.is_head_block:
-            x0 = x
-        else:
-            x0 = self.activation(x)
+        x0 = x if self.is_head_block else self.activation(x)
         x0 = self.conv1(x0)
         x0 = self.activation(x0)
         x0 = self.conv2(x0)

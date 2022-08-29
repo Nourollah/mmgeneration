@@ -169,7 +169,7 @@ class DenoisingUnet(nn.Module):
 
         # double output_channels to output mean and var at same time
         out_channels = in_channels if 'FIXED' in self.var_mode.upper() \
-            else 2 * in_channels
+                else 2 * in_channels
         self.out_channels = out_channels
 
         # check type of image_size
@@ -186,12 +186,13 @@ class DenoisingUnet(nn.Module):
         self.image_size = image_size
 
         channels_cfg = deepcopy(self._default_channels_cfg) \
-            if channels_cfg is None else deepcopy(channels_cfg)
+                if channels_cfg is None else deepcopy(channels_cfg)
         if isinstance(channels_cfg, dict):
             if image_size not in channels_cfg:
-                raise KeyError(f'`image_size={image_size} is not found in '
-                               '`channels_cfg`, only support configs for '
-                               f'{[chn for chn in channels_cfg.keys()]}')
+                raise KeyError(
+                    f'`image_size={image_size} is not found in `channels_cfg`, only support configs for {list(channels_cfg.keys())}'
+                )
+
             self.channel_factor_list = channels_cfg[image_size]
         elif isinstance(channels_cfg, list):
             self.channel_factor_list = channels_cfg
@@ -200,7 +201,7 @@ class DenoisingUnet(nn.Module):
                              f'receive {type(channels_cfg)}')
 
         embedding_channels = base_channels * 4 \
-            if embedding_channels == -1 else embedding_channels
+                if embedding_channels == -1 else embedding_channels
         self.time_embedding = TimeEmbedding(
             base_channels,
             embedding_channels=embedding_channels,
@@ -244,7 +245,7 @@ class DenoisingUnet(nn.Module):
         # construct the encoder part of Unet
         for level, factor in enumerate(self.channel_factor_list):
             in_channels_ = base_channels if level == 0 \
-                else base_channels * self.channel_factor_list[level - 1]
+                    else base_channels * self.channel_factor_list[level - 1]
             out_channels_ = base_channels * factor
 
             for _ in range(resblocks_per_downsample):
@@ -356,7 +357,7 @@ class DenoisingUnet(nn.Module):
             h = block(torch.cat([h, hs.pop()], dim=1), embedding)
         outputs = self.out(h)
 
-        output_dict = dict()
+        output_dict = {}
         if 'FIXED' not in self.var_mode.upper():
             # split mean and learned from output
             mean, var = outputs.split(self.out_channels // 2, dim=1)

@@ -17,10 +17,8 @@ def build(cfg, registry, default_args=None):
         nn.Module: A built nn module.
     """
     if isinstance(cfg, list):
-        modules = [
-            build_from_cfg(cfg_, registry, default_args) for cfg_ in cfg
-        ]
-        return modules
+        return [build_from_cfg(cfg_, registry, default_args) for cfg_ in cfg]
+
 
     return build_from_cfg(cfg, registry, default_args)
 

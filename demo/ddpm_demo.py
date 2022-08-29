@@ -76,8 +76,7 @@ def parse_args():
         help=('If true, color channels will not be permuted, This option is '
               'useful when inference model trained with rgb images.'))
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def create_gif(results, gif_name, fps=60, n_skip=1):
@@ -96,13 +95,13 @@ def create_gif(results, gif_name, fps=60, n_skip=1):
     except ImportError:
         raise RuntimeError('imageio is not installed,'
                            'Please use “pip install imageio” to install')
-    frames_list = []
-    for frame in results[::n_skip]:
-        frames_list.append(
-            (frame.permute(1, 2, 0).cpu().numpy() * 255.).astype(np.uint8))
+    frames_list = [
+        (frame.permute(1, 2, 0).cpu().numpy() * 255.0).astype(np.uint8)
+        for frame in results[::n_skip]
+    ]
 
     # ensure the final denoising results in frames_list
-    if not (len(results) % n_skip == 0):
+    if len(results) % n_skip != 0:
         frames_list.append((results[-1].permute(1, 2, 0).cpu().numpy() *
                             255.).astype(np.uint8))
 
@@ -115,7 +114,7 @@ def main():
         args.config, checkpoint=args.checkpoint, device=args.device)
 
     if args.sample_cfg is None:
-        args.sample_cfg = dict()
+        args.sample_cfg = {}
 
     suffix = osp.splitext(args.save_path)[-1]
     if suffix == '.gif':

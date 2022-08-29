@@ -29,10 +29,9 @@ class DistributedSampler(_DistributedSampler):
         self.samples_per_gpu = samples_per_gpu
         # fix the bug of the official implementation
         self.num_samples_per_replica = int(
-            int(
-                np.ceil(
-                    len(self.dataset) * 1.0 / self.num_replicas /
-                    samples_per_gpu)))
+            np.ceil(len(self.dataset) * 1.0 / self.num_replicas / samples_per_gpu)
+        )
+
         self.num_samples = self.num_samples_per_replica * self.samples_per_gpu
         self.total_size = self.num_samples * self.num_replicas
 
@@ -56,10 +55,11 @@ class DistributedSampler(_DistributedSampler):
             self.samples_per_gpu = samples_per_gpu
         # fix the bug of the official implementation
         self.num_samples_per_replica = int(
-            int(
-                np.ceil(
-                    len(self.dataset) * 1.0 / self.num_replicas /
-                    self.samples_per_gpu)))
+            np.ceil(
+                len(self.dataset) * 1.0 / self.num_replicas / self.samples_per_gpu
+            )
+        )
+
         self.num_samples = self.num_samples_per_replica * self.samples_per_gpu
         self.total_size = self.num_samples * self.num_replicas
 

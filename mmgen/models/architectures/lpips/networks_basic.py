@@ -102,37 +102,33 @@ class PNetLin(nn.Module):
             diffs[kk] = (feats0[kk] - feats1[kk])**2
 
         if self.lpips:
-            if self.spatial:
-                res = [
-                    upsample(
-                        self.lins[kk].model(diffs[kk]), out_H=in0.shape[2])
+            res = (
+                [
+                    upsample(self.lins[kk].model(diffs[kk]), out_H=in0.shape[2])
                     for kk in range(self.L)
                 ]
-            else:
-                res = [
-                    spatial_average(
-                        self.lins[kk].model(diffs[kk]), keepdim=True)
+                if self.spatial
+                else [
+                    spatial_average(self.lins[kk].model(diffs[kk]), keepdim=True)
                     for kk in range(self.L)
                 ]
+            )
+
+        elif self.spatial:
+            res = [
+                upsample(
+                    diffs[kk].sum(dim=1, keepdim=True), out_H=in0.shape[2])
+                for kk in range(self.L)
+            ]
         else:
-            if self.spatial:
-                res = [
-                    upsample(
-                        diffs[kk].sum(dim=1, keepdim=True), out_H=in0.shape[2])
-                    for kk in range(self.L)
-                ]
-            else:
-                res = [
-                    spatial_average(
-                        diffs[kk].sum(dim=1, keepdim=True), keepdim=True)
-                    for kk in range(self.L)
-                ]
+            res = [
+                spatial_average(
+                    diffs[kk].sum(dim=1, keepdim=True), keepdim=True)
+                for kk in range(self.L)
+            ]
 
         val = sum(res)
-        if retPerLayer:
-            return (val, res)
-
-        return val
+        return (val, res) if retPerLayer else val
 
 
 class ScalingLayer(nn.Module):

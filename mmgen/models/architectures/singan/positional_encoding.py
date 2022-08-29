@@ -103,13 +103,7 @@ class SinGANMSGeneratorPE(SinGANMultiScaleGenerator):
             min_feat_ch = min(
                 min_feat_channels * pow(2, int(np.floor(scale / 4))), 128)
 
-            if scale == 0:
-                in_ch = (
-                    first_stage_in_channels
-                    if first_stage_in_channels else in_channels)
-            else:
-                in_ch = in_channels
-
+            in_ch = first_stage_in_channels or in_channels if scale == 0 else in_channels
             self.blocks.append(
                 GeneratorBlock(
                     in_channels=in_ch,
@@ -228,10 +222,9 @@ class SinGANMSGeneratorPE(SinGANMultiScaleGenerator):
                 g_res = self.upsample(g_res, (h_next, w_next))
 
         if get_prev_res or return_noise:
-            output_dict = dict(
-                fake_img=g_res,
-                prev_res_list=prev_res_list,
-                noise_batch=noise_list)
-            return output_dict
+            return dict(
+                fake_img=g_res, prev_res_list=prev_res_list, noise_batch=noise_list
+            )
+
 
         return g_res

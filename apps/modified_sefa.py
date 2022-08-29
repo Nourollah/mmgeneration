@@ -37,15 +37,12 @@ def calc_eigens(args, state_dict):
         if 'style_modulation' in k and 'to_rgb' not in k and 'weight' in k
     }
 
-    weight_mat = []
-    for _, v in modulated.items():
-        weight_mat.append(v)
-
+    weight_mat = list(modulated.values())
     W = torch.cat(weight_mat, dim=0)
     eigen_vector = torch.svd(W).V
 
     # save eigen vector
-    output_path = os.path.splitext(args.ckpt)[0] + '_eigen-vec-mod.pth'
+    output_path = f'{os.path.splitext(args.ckpt)[0]}_eigen-vec-mod.pth'
     torch.save({'ckpt': args.ckpt, 'eigen_vector': eigen_vector}, output_path)
 
     return eigen_vector
@@ -53,11 +50,7 @@ def calc_eigens(args, state_dict):
 
 if __name__ == '__main__':
     # set device
-    if torch.cuda.is_available():
-        device = 'cuda'
-    else:
-        device = 'cpu'
-
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     # set grad enabled = False
     torch.set_grad_enabled(False)
 
@@ -126,11 +119,7 @@ if __name__ == '__main__':
     load_checkpoint(model, args.ckpt, map_location='cpu')
 
     # get generator
-    if model.use_ema:
-        generator = model.generator_ema
-    else:
-        generator = model.generator
-
+    generator = model.generator_ema if model.use_ema else model.generator
     generator = generator.to(device)
     generator.eval()
 
@@ -152,13 +141,13 @@ if __name__ == '__main__':
     latent = generator.style_mapping(noise)
 
     # kwargs for different gan models
-    kwargs = dict()
+    kwargs = {}
     # mspie-stylegan2
     if args.input_scale > 0:
         kwargs['chosen_scale'] = args.input_scale
 
     if args.sample_cfg is None:
-        args.sample_cfg = dict()
+        args.sample_cfg = {}
 
     mmcv.print_log('Sampling images with modified SeFa', 'mmgen')
     sample = generator([latent], input_is_latent=True, **args.sample_cfg)

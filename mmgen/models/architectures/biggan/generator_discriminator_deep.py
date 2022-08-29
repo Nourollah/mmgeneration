@@ -135,8 +135,10 @@ class BigGANDeepGenerator(nn.Module):
         self.shared_dim = shared_dim
         self.with_shared_embedding = with_shared_embedding
         self.output_scale = output_scale
-        self.arch = arch_cfg if arch_cfg else self._get_default_arch_cfg(
-            self.output_scale, base_channels)
+        self.arch = arch_cfg or self._get_default_arch_cfg(
+            self.output_scale, base_channels
+        )
+
         self.input_scale = input_scale
         self.concat_noise = concat_noise
         self.blocks_cfg = deepcopy(blocks_cfg)
@@ -374,10 +376,12 @@ class BigGANDeepGenerator(nn.Module):
         noise_batch = noise_batch.to(get_module_device(self))
         if label_batch is not None:
             label_batch = label_batch.to(get_module_device(self))
-            if not use_outside_embedding:
-                class_vector = self.shared_embedding(label_batch)
-            else:
-                class_vector = label_batch
+            class_vector = (
+                label_batch
+                if use_outside_embedding
+                else self.shared_embedding(label_batch)
+            )
+
         else:
             class_vector = None
 
@@ -402,11 +406,13 @@ class BigGANDeepGenerator(nn.Module):
         x = x.view(x.size(0), self.input_scale, self.input_scale, -1)
         x = x.permute(0, 3, 1, 2).contiguous()
         # Loop over blocks
-        for idx, conv_block in enumerate(self.conv_blocks):
-            if isinstance(conv_block, SelfAttentionBlock):
-                x = conv_block(x)
-            else:
-                x = conv_block(x, y)
+        for conv_block in self.conv_blocks:
+            x = (
+                conv_block(x)
+                if isinstance(conv_block, SelfAttentionBlock)
+                else conv_block(x, y)
+            )
+
         # Apply batchnorm-relu-conv-tanh at output
         x = self.output_layer(x)
         out_img = torch.tanh(x)
@@ -415,9 +421,10 @@ class BigGANDeepGenerator(nn.Module):
             out_img = out_img[:, [2, 1, 0], ...]
 
         if return_noise:
-            output = dict(
-                fake_img=out_img, noise_batch=noise_batch, label=label_batch)
-            return output
+            return dict(
+                fake_img=out_img, noise_batch=noise_batch, label=label_batch
+            )
+
 
         return out_img
 
@@ -555,8 +562,10 @@ class BigGANDeepDiscriminator(nn.Module):
         self.in_channels = in_channels
         self.base_channels = base_channels
         self.block_depth = block_depth
-        self.arch = arch_cfg if arch_cfg else self._get_default_arch_cfg(
-            self.input_scale, self.base_channels)
+        self.arch = arch_cfg or self._get_default_arch_cfg(
+            self.input_scale, self.base_channels
+        )
+
         self.blocks_cfg = deepcopy(blocks_cfg)
         self.blocks_cfg.update(
             dict(

@@ -63,7 +63,7 @@ class VisualizeUnconditionalSamples(Hook):
         # the sampling noise will be initialized by the first sampling.
         self.sampling_noise = None
 
-        self.kwargs = kwargs if kwargs is not None else dict()
+        self.kwargs = kwargs if kwargs is not None else {}
 
     @master_only
     def after_train_iter(self, runner):

@@ -47,7 +47,6 @@ def train_model(model,
     # prepare data loaders
     dataset = dataset if isinstance(dataset, (list, tuple)) else [dataset]
 
-    # default loader config
     loader_cfg = dict(
         samples_per_gpu=cfg.data.samples_per_gpu,
         workers_per_gpu=cfg.data.workers_per_gpu,
@@ -55,16 +54,20 @@ def train_model(model,
         num_gpus=len(cfg.gpu_ids),
         dist=distributed,
         persistent_workers=cfg.data.get('persistent_workers', False),
-        seed=cfg.seed)
-
-    # The overall dataloader settings
-    loader_cfg.update({
+        seed=cfg.seed,
+    ) | {
         k: v
-        for k, v in cfg.data.items() if k not in [
-            'train', 'val', 'test', 'train_dataloader', 'val_dataloader',
-            'test_dataloader'
+        for k, v in cfg.data.items()
+        if k
+        not in [
+            'train',
+            'val',
+            'test',
+            'train_dataloader',
+            'val_dataloader',
+            'test_dataloader',
         ]
-    })
+    }
 
     # The specific datalaoder settings
     train_loader_cfg = {**loader_cfg, **cfg.data.get('train_dataloader', {})}
@@ -80,12 +83,7 @@ def train_model(model,
         model = model.cuda()
 
     # build optimizer
-    if cfg.optimizer:
-        optimizer = build_optimizers(model, cfg.optimizer)
-    # In GANs, we allow building optimizer in GAN model.
-    else:
-        optimizer = None
-
+    optimizer = build_optimizers(model, cfg.optimizer) if cfg.optimizer else None
     _use_apex_amp = False
     if cfg.get('apex_amp', None):
         model, optimizer = apex_amp_initialize(model, optimizer,
@@ -96,10 +94,7 @@ def train_model(model,
 
     if distributed:
         find_unused_parameters = cfg.get('find_unused_parameters', False)
-        use_ddp_wrapper = cfg.get('use_ddp_wrapper', False)
-        # Sets the `find_unused_parameters` parameter in
-        # torch.nn.parallel.DistributedDataParallel
-        if use_ddp_wrapper:
+        if use_ddp_wrapper := cfg.get('use_ddp_wrapper', False):
             mmcv.print_log('Use DDP Wrapper.', 'mmgen')
             model = DistributedDataParallelWrapper(
                 model.cuda(),

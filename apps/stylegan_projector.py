@@ -101,8 +101,7 @@ def parse_args():
         action='store_true',
         help='allow to use distinct latent codes to each layers',
     )
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def noise_regularize(noises):

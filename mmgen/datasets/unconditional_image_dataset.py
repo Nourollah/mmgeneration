@@ -70,10 +70,11 @@ class UnconditionalImageDataset(Dataset):
         return len(self.imgs_list)
 
     def __getitem__(self, idx):
-        if not self.test_mode:
-            return self.prepare_train_data(idx)
-
-        return self.prepare_test_data(idx)
+        return (
+            self.prepare_test_data(idx)
+            if self.test_mode
+            else self.prepare_train_data(idx)
+        )
 
     def __repr__(self):
         dataset_name = self.__class__

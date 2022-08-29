@@ -24,10 +24,7 @@ class EmbedSequential(nn.Sequential):
 
     def forward(self, x, y):
         for layer in self:
-            if isinstance(layer, DenoisingResBlock):
-                x = layer(x, y)
-            else:
-                x = layer(x)
+            x = layer(x, y) if isinstance(layer, DenoisingResBlock) else layer(x)
         return x
 
 
@@ -149,7 +146,7 @@ class TimeEmbedding(nn.Module):
         # add `dim` to embedding config
         embedding_cfg_ = dict(dim=in_channels)
         if embedding_cfg is not None:
-            embedding_cfg_.update(embedding_cfg)
+            embedding_cfg_ |= embedding_cfg
         if embedding_mode.upper() == 'SIN':
             self.embedding_fn = partial(self.sinusodial_embedding,
                                         **embedding_cfg_)
@@ -273,9 +270,7 @@ class DenoisingResBlock(nn.Module):
         self.init_weights()
 
     def forward_shortcut(self, x):
-        if self.learnable_shortcut:
-            return self.shortcut(x)
-        return x
+        return self.shortcut(x) if self.learnable_shortcut else x
 
     def forward(self, x, y):
         """Forward function.

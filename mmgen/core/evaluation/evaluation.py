@@ -53,13 +53,13 @@ def make_vanilla_dataloader(img_path, batch_size, dist=False):
             imgs_root=img_path,
             pipeline=pipeline,
         ))
-    dataloader = build_dataloader(
+    return build_dataloader(
         dataset,
         samples_per_gpu=batch_size,
         workers_per_gpu=4,
         dist=dist,
-        shuffle=True)
-    return dataloader
+        shuffle=True,
+    )
 
 
 @torch.no_grad()
@@ -106,7 +106,7 @@ def offline_evaluation(model,
         suffix = 1
         samples_path = temp_path
         while os.path.exists(samples_path):
-            samples_path = temp_path + '_' + str(suffix)
+            samples_path = f'{temp_path}_{str(suffix)}'
             suffix += 1
         os.makedirs(samples_path)
         delete_samples_path = True
@@ -163,7 +163,7 @@ def offline_evaluation(model,
                 images = fakes[i:i + 1]
                 images = ((images + 1) / 2)
                 images = images.clamp_(0, 1)
-                image_name = str(num_exist + begin + i) + '.png'
+                image_name = f'{str(num_exist + begin + i)}.png'
                 save_image(images, os.path.join(samples_path, image_name))
 
     if num_needed > 0 and rank == 0:
@@ -339,8 +339,10 @@ def online_evaluation(model, data_loader, metrics, logger, basic_table_info,
         sys.stdout.write('\n')
 
     # define mmcv progress bar
-    max_num_images = 0 if len(vanilla_metrics) == 0 else max(
-        metric.num_fake_need for metric in vanilla_metrics)
+    max_num_images = max(
+        (metric.num_fake_need for metric in vanilla_metrics), default=0
+    )
+
     if rank == 0:
         mmcv.print_log(f'Sample {max_num_images} fake images for evaluation',
                        'mmgen')

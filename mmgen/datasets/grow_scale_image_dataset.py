@@ -79,7 +79,7 @@ class GrowScaleImgDataset(Dataset):
         if self.gpu_samples_per_scale is not None:
             assert isinstance(self.gpu_samples_per_scale, dict)
         else:
-            self.gpu_samples_per_scale = dict()
+            self.gpu_samples_per_scale = {}
         self.gpu_samples_base = gpu_samples_base
         self.load_annotations()
 
@@ -121,7 +121,7 @@ class GrowScaleImgDataset(Dataset):
         self.imgs_root = self.imgs_roots[str(self._curr_scale)]
         self.load_annotations()
         # print basic dataset information to check the validity
-        mmcv.print_log('Update Dataset: ' + repr(self), 'mmgen')
+        mmcv.print_log(f'Update Dataset: {repr(self)}', 'mmgen')
         return True
 
     def concat_imgs_list_to(self, num):
@@ -166,10 +166,11 @@ class GrowScaleImgDataset(Dataset):
         return len(self.imgs_list)
 
     def __getitem__(self, idx):
-        if not self.test_mode:
-            return self.prepare_train_data(idx)
-
-        return self.prepare_test_data(idx)
+        return (
+            self.prepare_test_data(idx)
+            if self.test_mode
+            else self.prepare_train_data(idx)
+        )
 
     def __repr__(self):
         dataset_name = self.__class__

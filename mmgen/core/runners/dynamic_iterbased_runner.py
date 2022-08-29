@@ -70,9 +70,12 @@ class IterLoader:
         if update_flag:
             # the sampler should be updated with the modified dataset
             assert hasattr(self._dataloader.sampler, 'update_sampler')
-            samples_per_gpu = None if not hasattr(
-                self._dataloader.dataset, 'samples_per_gpu'
-            ) else self._dataloader.dataset.samples_per_gpu
+            samples_per_gpu = (
+                self._dataloader.dataset.samples_per_gpu
+                if hasattr(self._dataloader.dataset, 'samples_per_gpu')
+                else None
+            )
+
             self._dataloader.sampler.update_sampler(self._dataloader.dataset,
                                                     samples_per_gpu)
             # update samples per gpu
@@ -141,11 +144,7 @@ class DynamicIterBasedRunner(IterBasedRunner):
                  use_apex_amp=False,
                  **kwargs):
         super().__init__(*args, **kwargs)
-        if is_module_wrapper(self.model):
-            _model = self.model.module
-        else:
-            _model = self.model
-
+        _model = self.model.module if is_module_wrapper(self.model) else self.model
         self.is_dynamic_ddp = is_dynamic_ddp
         self.pass_training_status = pass_training_status
 
@@ -181,10 +180,7 @@ class DynamicIterBasedRunner(IterBasedRunner):
                 getattr(hook, fn_name)(self)
 
     def train(self, data_loader, **kwargs):
-        if is_module_wrapper(self.model):
-            _model = self.model.module
-        else:
-            _model = self.model
+        _model = self.model.module if is_module_wrapper(self.model) else self.model
         self.model.train()
         self.mode = 'train'
         # check if self.optimizer from model and track it
@@ -204,13 +200,13 @@ class DynamicIterBasedRunner(IterBasedRunner):
             kwargs['running_status'] = running_status
         # ddp reducer for tracking dynamic computational graph
         if self.is_dynamic_ddp:
-            kwargs.update(dict(ddp_reducer=self.model.reducer))
+            kwargs |= dict(ddp_reducer=self.model.reducer)
 
         if self.with_fp16_grad_scaler:
-            kwargs.update(dict(loss_scaler=self.loss_scaler))
+            kwargs |= dict(loss_scaler=self.loss_scaler)
 
         if self.use_apex_amp:
-            kwargs.update(dict(use_apex_amp=True))
+            kwargs |= dict(use_apex_amp=True)
 
         outputs = self.model.train_step(data_batch, self.optimizer, **kwargs)
 
@@ -220,10 +216,9 @@ class DynamicIterBasedRunner(IterBasedRunner):
 
         # further check for the cases where the optimizer is built in
         # `train_step`.
-        if self.optimizer is None:
-            if hasattr(_model, 'optimizer'):
-                self.optimizer_from_model = True
-                self.optimizer = _model.optimizer
+        if self.optimizer is None and hasattr(_model, 'optimizer'):
+            self.optimizer_from_model = True
+            self.optimizer = _model.optimizer
 
         # check if self.optimizer from model and track it
         if self.optimizer_from_model:
@@ -275,9 +270,7 @@ class DynamicIterBasedRunner(IterBasedRunner):
                 self._inner_iter = 0
                 mode, iters = flow
                 if not isinstance(mode, str) or not hasattr(self, mode):
-                    raise ValueError(
-                        'runner has no method named "{}" to run a workflow'.
-                        format(mode))
+                    raise ValueError(f'runner has no method named "{mode}" to run a workflow')
                 iter_runner = getattr(self, mode)
                 for _ in range(iters):
                     if mode == 'train' and self.iter >= self._max_iters:
@@ -401,7 +394,7 @@ class DynamicIterBasedRunner(IterBasedRunner):
             # the string will not be changed if it contains capital letters.
             if policy_type == policy_type.lower():
                 policy_type = policy_type.title()
-            hook_type = policy_type + 'LrUpdaterHook'
+            hook_type = f'{policy_type}LrUpdaterHook'
             lr_config['type'] = hook_type
             hook = mmcv.build_from_cfg(lr_config, HOOKS)
         else:

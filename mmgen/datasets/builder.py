@@ -44,9 +44,10 @@ def build_dataset(cfg, default_args=None):
         # dataset = ConcatDataset(
         #   [build_dataset(c, default_args) for c in cfg])
     if cfg['type'] == 'RepeatDataset':
-        dataset = RepeatDataset(
-            build_dataset(cfg['dataset'], default_args), cfg['times'])
-    # add support for using datasets from `MMClassification`
+        return RepeatDataset(
+            build_dataset(cfg['dataset'], default_args), cfg['times']
+        )
+
     elif cfg['type'].startswith('mmcls.'):
         try:
             from mmcls.datasets import build_dataset as build_dataset_mmcls
@@ -55,11 +56,9 @@ def build_dataset(cfg, default_args=None):
                 f'Please install mmcls to use {cfg["type"]} dataset.')
         _cfg = deepcopy(cfg)
         _cfg['type'] = _cfg['type'][6:]
-        dataset = build_dataset_mmcls(_cfg, default_args)
+        return build_dataset_mmcls(_cfg, default_args)
     else:
-        dataset = build_from_cfg(cfg, DATASETS, default_args)
-
-    return dataset
+        return build_from_cfg(cfg, DATASETS, default_args)
 
 
 def build_dataloader(dataset,
@@ -124,7 +123,7 @@ def build_dataloader(dataset,
         warnings.warn('persistent_workers is invalid because your pytorch '
                       'version is lower than 1.7.0')
 
-    data_loader = DataLoader(
+    return DataLoader(
         dataset,
         batch_size=batch_size,
         sampler=sampler,
@@ -132,9 +131,8 @@ def build_dataloader(dataset,
         collate_fn=partial(collate, samples_per_gpu=samples_per_gpu),
         shuffle=shuffle,
         worker_init_fn=init_fn,
-        **kwargs)
-
-    return data_loader
+        **kwargs
+    )
 
 
 def worker_init_fn(worker_id, num_workers, rank, seed):

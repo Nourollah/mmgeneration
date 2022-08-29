@@ -56,7 +56,7 @@ class ToTensor:
         return results
 
     def __repr__(self):
-        return self.__class__.__name__ + f'(keys={self.keys})'
+        return f'{self.__class__.__name__}(keys={self.keys})'
 
 
 @PIPELINES.register_module()
@@ -127,11 +127,8 @@ class Collect:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        data = {}
-        img_meta = {}
-        for key in self.meta_keys:
-            img_meta[key] = results[key]
-        data['meta'] = DC(img_meta, cpu_only=True)
+        img_meta = {key: results[key] for key in self.meta_keys}
+        data = {'meta': DC(img_meta, cpu_only=True)}
         for key in self.keys:
             data[key] = results[key]
         return data

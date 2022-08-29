@@ -88,8 +88,7 @@ def parse_args():
         nargs='+',
         action=DictAction,
         help='Other customized kwargs for sampling function')
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 @torch.no_grad()
@@ -121,19 +120,18 @@ def batch_inference(generator,
             batch.
     """
     # split noise into groups
-    if noise is not None:
-        if isinstance(noise, torch.Tensor):
-            num_batches = noise.shape[0]
-            noise_group = torch.split(noise, max_batch_size, 0)
-        else:
-            num_batches = noise[0].shape[0]
-            noise_group = torch.split(noise[0], max_batch_size, 0)
-            noise_group = [[noise_tensor] for noise_tensor in noise_group]
-    else:
+    if noise is None:
         noise_group = [None] * (
             num_batches // max_batch_size +
             (1 if num_batches % max_batch_size > 0 else 0))
 
+    elif isinstance(noise, torch.Tensor):
+        num_batches = noise.shape[0]
+        noise_group = torch.split(noise, max_batch_size, 0)
+    else:
+        num_batches = noise[0].shape[0]
+        noise_group = torch.split(noise[0], max_batch_size, 0)
+        noise_group = [[noise_tensor] for noise_tensor in noise_group]
     # split embedding into groups
     if embedding is not None:
         assert isinstance(embedding, torch.Tensor)
@@ -205,7 +203,7 @@ def sample_from_path(generator,
         embedding_interp = embedding_a + (
             embedding_b - embedding_a) * alpha.to(embedding_a.dtype)
         if isinstance(generator, (BigGANDeepGenerator, BigGANGenerator)):
-            kwargs.update(dict(use_outside_embedding=True))
+            kwargs |= dict(use_outside_embedding=True)
         sample = batch_inference(generator, latent_interp, embedding_interp,
                                  **kwargs)
         interp_samples.append(sample)
@@ -251,8 +249,8 @@ def main():
 
     kwargs = dict(max_batch_size=args.batch_size)
     if args.sample_cfg is None:
-        args.sample_cfg = dict()
-    kwargs.update(args.sample_cfg)
+        args.sample_cfg = {}
+    kwargs |= args.sample_cfg
 
     # get noises corresponding to each endpoint
     noise_batch = batch_inference(
@@ -276,8 +274,7 @@ def main():
         label_batch = label_batch[0] * torch.ones_like(label_batch)
     # set noise fixed
     if args.fix_z:
-        noise_batch = torch.cat(
-            [noise_batch[0:1, ]] * noise_batch.shape[0], dim=0)
+        noise_batch = torch.cat([noise_batch[:1]] * noise_batch.shape[0], dim=0)
 
     if args.show_mode == 'sequence':
         results = sample_from_path(generator, noise_batch[:-1, ],

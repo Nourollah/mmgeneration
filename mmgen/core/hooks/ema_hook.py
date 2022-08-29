@@ -72,8 +72,8 @@ class ExponentialMovingAverageHook(Hook):
             assert k.endswith(
                 '_ema'), 'You should give keys that end with "_ema".'
         self.interp_mode = interp_mode
-        self.interp_cfg = dict() if interp_cfg is None else deepcopy(
-            interp_cfg)
+        self.interp_cfg = {} if interp_cfg is None else deepcopy(interp_cfg)
+
         self.interval = interval
         self.start_iter = start_iter
 
@@ -82,8 +82,8 @@ class ExponentialMovingAverageHook(Hook):
         ), f'Currently, we do not support {self.interp_mode} for EMA.'
         self.interp_func = getattr(self, interp_mode)
 
-        self.momentum_cfg = dict() if momentum_cfg is None else deepcopy(
-            momentum_cfg)
+        self.momentum_cfg = {} if momentum_cfg is None else deepcopy(momentum_cfg)
+
         self.momentum_policy = momentum_policy
         if momentum_policy != 'fixed':
             assert hasattr(
@@ -186,7 +186,7 @@ class ExponentialMovingAverageHook(Hook):
             if not hasattr(model, k) and not hasattr(model, k[:-4]):
                 raise RuntimeError(
                     f'Cannot find both {k[:-4]} and {k} network for EMA hook.')
-            if not hasattr(model, k) and hasattr(model, k[:-4]):
+            if not hasattr(model, k):
                 setattr(model, k, deepcopy(getattr(model, k[:-4])))
                 warnings.warn(
                     f'We do not suggest construct and initialize EMA model {k}'

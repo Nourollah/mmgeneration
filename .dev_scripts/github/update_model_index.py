@@ -66,7 +66,7 @@ def collate_metrics(keys):
     Returns:
         dict: A dict of metrics.
     """
-    used_metrics = dict()
+    used_metrics = {}
     for idx, key in enumerate(keys):
         if key in [
                 'Model', 'Models', 'Download', 'Config',
@@ -92,7 +92,7 @@ def get_task_dict(md_file):
     with open(md_file, 'r') as md:
         lines = md.readlines()
     i = 0
-    task_dict = dict()
+    task_dict = {}
     while i < len(lines):
         if '<details open>' in lines[i] and '<summary>' in lines[i + 1]:
             task = re.findall(r'<summary>(.*) \(click to collapse\)</summary>',
@@ -135,7 +135,7 @@ def generate_unique_name(md_file):
     unique_lists = [[n for n in name if n not in common_set]
                     for name in split_names]
 
-    unique_dict = dict()
+    unique_dict = {}
     name_list = []
     for i, f in enumerate(config_files):
         base = split_names[i][0]
@@ -179,13 +179,11 @@ def parse_md(md_file, task):
                 collection['Name'] = name
                 collection_name = name
                 i += 1
-            # parse url from '> ['
             elif lines[i][:3] == '> [':
                 url = re.findall(r'\(.*\)', lines[i])[0]
                 collection['Paper'].append(url[1:-1])
                 i += 1
 
-            # parse table
             elif lines[i][0] == '|' and i + 1 < len(lines) and \
                     (lines[i + 1][:3] == '| :' or lines[i + 1][:2] == '|:'):
                 cols = [col.strip() for col in lines[i].split('|')][1:-1]
@@ -228,13 +226,16 @@ def parse_md(md_file, task):
                     name_key = osp.splitext(osp.basename(config))[0]
                     model_name = name_key
 
-                    # find dataset in config file
-                    dataset = 'Others'
                     config_low = config.lower()
-                    for d in all_training_data:
-                        if d in config_low:
-                            dataset = d.upper()
-                            break
+                    dataset = next(
+                        (
+                            d.upper()
+                            for d in all_training_data
+                            if d in config_low
+                        ),
+                        'Others',
+                    )
+
                     metadata = {'Training Data': dataset}
                     if flops_idx != -1:
                         metadata['FLOPs'] = float(line[flops_idx])
@@ -277,14 +278,13 @@ def parse_md(md_file, task):
             else:
                 i += 1
 
-    if len(models) == 0:
+    if not models:
         warnings.warn('no model is found in this md file')
 
     result = {'Collections': [collection], 'Models': models}
     yml_file = md_file.replace('README.md', 'metafile.yml')
 
-    is_different = dump_yaml_and_check_difference(result, yml_file)
-    return is_different
+    return dump_yaml_and_check_difference(result, yml_file)
 
 
 def update_model_index():
@@ -302,10 +302,7 @@ def update_model_index():
         [osp.relpath(yml_file, MMGeneration_ROOT) for yml_file in yml_files]
     }
     model_index_file = osp.join(MMGeneration_ROOT, 'model-index.yml')
-    is_different = dump_yaml_and_check_difference(model_index,
-                                                  model_index_file)
-
-    return is_different
+    return dump_yaml_and_check_difference(model_index, model_index_file)
 
 
 if __name__ == '__main__':

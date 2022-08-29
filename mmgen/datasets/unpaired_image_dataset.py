@@ -43,8 +43,8 @@ class UnpairedImageDataset(Dataset):
                  domain_b=None):
         super().__init__()
         phase = 'test' if test_mode else 'train'
-        self.dataroot_a = osp.join(str(dataroot), phase + 'A')
-        self.dataroot_b = osp.join(str(dataroot), phase + 'B')
+        self.dataroot_a = osp.join(str(dataroot), f'{phase}A')
+        self.dataroot_b = osp.join(str(dataroot), f'{phase}B')
         self.data_infos_a = self.load_annotations(self.dataroot_a)
         self.data_infos_b = self.load_annotations(self.dataroot_b)
         self.len_a = len(self.data_infos_a)
@@ -66,11 +66,8 @@ class UnpairedImageDataset(Dataset):
         Returns:
             list[dict]: List that contains unpaired image paths of one domain.
         """
-        data_infos = []
         paths = sorted(self.scan_folder(dataroot))
-        for path in paths:
-            data_infos.append(dict(path=path))
-        return data_infos
+        return [dict(path=path) for path in paths]
 
     def prepare_train_data(self, idx):
         """Prepare unpaired training data.
@@ -84,9 +81,11 @@ class UnpairedImageDataset(Dataset):
         img_a_path = self.data_infos_a[idx % self.len_a]['path']
         idx_b = np.random.randint(0, self.len_b)
         img_b_path = self.data_infos_b[idx_b]['path']
-        results = dict()
-        results[f'img_{self.domain_a}_path'] = img_a_path
-        results[f'img_{self.domain_b}_path'] = img_b_path
+        results = {
+            f'img_{self.domain_a}_path': img_a_path,
+            f'img_{self.domain_b}_path': img_b_path,
+        }
+
         return self.pipeline(results)
 
     def prepare_test_data(self, idx):
@@ -100,9 +99,11 @@ class UnpairedImageDataset(Dataset):
         """
         img_a_path = self.data_infos_a[idx % self.len_a]['path']
         img_b_path = self.data_infos_b[idx % self.len_b]['path']
-        results = dict()
-        results[f'img_{self.domain_a}_path'] = img_a_path
-        results[f'img_{self.domain_b}_path'] = img_b_path
+        results = {
+            f'img_{self.domain_a}_path': img_a_path,
+            f'img_{self.domain_b}_path': img_b_path,
+        }
+
         return self.pipeline(results)
 
     def __len__(self):
@@ -136,7 +137,8 @@ class UnpairedImageDataset(Dataset):
         Args:
             idx (int): Index for getting each item.
         """
-        if not self.test_mode:
-            return self.prepare_train_data(idx)
-
-        return self.prepare_test_data(idx)
+        return (
+            self.prepare_test_data(idx)
+            if self.test_mode
+            else self.prepare_train_data(idx)
+        )

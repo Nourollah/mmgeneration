@@ -67,10 +67,12 @@ class SinusoidalPositionalEmbedding(nn.Module):
 
         # there is a little difference from the original paper.
         half_dim = embedding_dim // 2
-        if not div_half_dim:
-            emb = np.log(10000) / (half_dim - 1)
-        else:
-            emb = np.log(1e4) / half_dim
+        emb = (
+            np.log(1e4) / half_dim
+            if div_half_dim
+            else np.log(10000) / (half_dim - 1)
+        )
+
         # compute exp(-log10000 / d * i)
         emb = torch.exp(torch.arange(half_dim, dtype=torch.float) * -emb)
         emb = torch.arange(
@@ -87,8 +89,7 @@ class SinusoidalPositionalEmbedding(nn.Module):
 
         Returned tensor is expected to be of size  [bsz x seq_len x emb_dim]
         """
-        assert input.dim() == 2 or input.dim(
-        ) == 4, 'Input dimension should be 2 (1D) or 4(2D)'
+        assert input.dim() in [2, 4], 'Input dimension should be 2 (1D) or 4(2D)'
 
         if input.dim() == 4:
             return self.make_grid2d_like(input, **kwargs)

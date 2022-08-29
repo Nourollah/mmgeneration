@@ -161,10 +161,7 @@ class DCGANGenerator(nn.Module):
         x = self.upsampling(x)
         x = self.output_layer(x)
 
-        if return_noise:
-            return dict(fake_img=x, noise_batch=noise_batch)
-
-        return x
+        return dict(fake_img=x, noise_batch=noise_batch) if return_noise else x
 
     def init_weights(self, pretrained=None):
         """Init weights for models.

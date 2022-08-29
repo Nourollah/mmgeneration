@@ -179,10 +179,7 @@ class LSGANGenerator(nn.Module):
         for conv in self.conv_blocks:
             x = conv(x)
 
-        if return_noise:
-            return dict(fake_img=x, noise_batch=noise_batch)
-
-        return x
+        return dict(fake_img=x, noise_batch=noise_batch) if return_noise else x
 
 
 @MODULES.register_module()

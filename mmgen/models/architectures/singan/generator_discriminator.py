@@ -155,11 +155,10 @@ class SinGANMultiScaleGenerator(nn.Module):
                 g_res = self.upsample(g_res, (h_next, w_next))
 
         if get_prev_res or return_noise:
-            output_dict = dict(
-                fake_img=g_res,
-                prev_res_list=prev_res_list,
-                noise_batch=noise_list)
-            return output_dict
+            return dict(
+                fake_img=g_res, prev_res_list=prev_res_list, noise_batch=noise_list
+            )
+
 
         return g_res
 
@@ -245,8 +244,7 @@ class SinGANMultiScaleDiscriminator(nn.Module):
         Returns:
             Tensor: Discriminative results.
         """
-        out = self.blocks[curr_scale](x)
-        return out
+        return self.blocks[curr_scale](x)
 
     def check_and_load_prev_weight(self, curr_scale):
         if curr_scale == 0:

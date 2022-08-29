@@ -324,11 +324,7 @@ class RandomImgNoise:
         Returns:
             dict: A dict containing the processed data and information.
         """
-        if self.distribution == 'uniform':
-            dist_fn = np.random.rand
-        else:  # self.distribution == 'normal
-            dist_fn = np.random.randn
-
+        dist_fn = np.random.rand if self.distribution == 'uniform' else np.random.randn
         for key in self.keys:
             img_size = results[key].shape
             noise = dist_fn(*img_size)
@@ -421,9 +417,9 @@ class CenterCropLongEdge:
             img_height, img_width = img.shape[:2]
             crop_size = min(img_height, img_width)
             y1 = 0 if img_height == crop_size else \
-                int(round(img_height - crop_size) / 2)
+                    int(round(img_height - crop_size) / 2)
             x1 = 0 if img_width == crop_size else \
-                int(round(img_width - crop_size) / 2)
+                    int(round(img_width - crop_size) / 2)
             y2 = y1 + crop_size - 1
             x2 = x1 + crop_size - 1
 

@@ -102,7 +102,7 @@ def _load_inception_from_path(inception_path):
 
 
 def _load_inception_from_url(inception_url):
-    inception_url = inception_url if inception_url else TERO_INCEPTION_URL
+    inception_url = inception_url or TERO_INCEPTION_URL
     mmcv.print_log(f'Try to download Inception Model from {inception_url}...',
                    'mmgen')
     try:
@@ -174,8 +174,9 @@ def _ssim_for_multi_scale(img1,
     """
     if img1.shape != img2.shape:
         raise RuntimeError(
-            'Input images must have the same shape (%s vs. %s).' %
-            (img1.shape, img2.shape))
+            f'Input images must have the same shape ({img1.shape} vs. {img2.shape}).'
+        )
+
     if img1.ndim != 4:
         raise RuntimeError('Input images must have four dimensions, not %d' %
                            img1.ndim)
@@ -266,16 +267,16 @@ def ms_ssim(img1,
     """
     if img1.shape != img2.shape:
         raise RuntimeError(
-            'Input images must have the same shape (%s vs. %s).' %
-            (img1.shape, img2.shape))
+            f'Input images must have the same shape ({img1.shape} vs. {img2.shape}).'
+        )
+
     if img1.ndim != 4:
         raise RuntimeError('Input images must have four dimensions, not %d' %
                            img1.ndim)
 
     # Note: default weights don't sum to 1.0 but do match the paper / matlab
     # code.
-    weights = np.array(
-        weights if weights else [0.0448, 0.2856, 0.3001, 0.2363, 0.1333])
+    weights = np.array(weights or [0.0448, 0.2856, 0.3001, 0.2363, 0.1333])
     levels = weights.size
     im1, im2 = [x.astype(np.float32) for x in [img1, img2]]
     mssim = []
@@ -398,7 +399,7 @@ class Metric(ABC):
                 return 0
 
             if isinstance(batch, dict):
-                batch_size = [v for v in batch.values()][0].shape[0]
+                batch_size = list(batch.values())[0].shape[0]
                 end = min(batch_size,
                           self.num_real_need - self.num_real_feeded)
                 batch_to_feed = {k: v[:end, ...] for k, v in batch.items()}
@@ -672,7 +673,7 @@ class MS_SSIM(Metric):
             return
         minibatch = ((minibatch + 1) / 2)
         minibatch = minibatch.clamp_(0, 1)
-        half1 = minibatch[0::2].cpu().data.numpy().transpose((0, 2, 3, 1))
+        half1 = minibatch[::2].cpu().data.numpy().transpose((0, 2, 3, 1))
         half1 = (half1 * 255).astype('uint8')
         half2 = minibatch[1::2].cpu().data.numpy().transpose((0, 2, 3, 1))
         half2 = (half2 * 255).astype('uint8')
@@ -727,8 +728,8 @@ class SWD(Metric):
 
     def prepare(self):
         """Prepare for evaluating models with this metric."""
-        self.real_descs = [[] for res in self.resolutions]
-        self.fake_descs = [[] for res in self.resolutions]
+        self.real_descs = [[] for _ in self.resolutions]
+        self.fake_descs = [[] for _ in self.resolutions]
         self.gaussian_k = get_gaussian_kernel()
 
     @torch.no_grad()
@@ -961,14 +962,11 @@ class PR(Metric):
             torch.Tensor: Vgg16 features of input images.
         """
         if self.use_tero_scirpt:
-            feature = self.vgg16(images, return_features=True)
-        else:
-            batch = F.interpolate(images, size=(224, 224))
-            before_fc = self.vgg16.features(batch)
-            before_fc = before_fc.view(-1, 7 * 7 * 512)
-            feature = self.vgg16.classifier[:4](before_fc)
-
-        return feature
+            return self.vgg16(images, return_features=True)
+        batch = F.interpolate(images, size=(224, 224))
+        before_fc = self.vgg16.features(batch)
+        before_fc = before_fc.view(-1, 7 * 7 * 512)
+        return self.vgg16.classifier[:4](before_fc)
 
 
 @METRICS.register_module()
@@ -1071,9 +1069,10 @@ class IS(Metric):
 
         from PIL import Image
         if x.ndim != 4:
-            raise ValueError('Input images should have 4 dimensions, '
-                             'here receive input with {} '
-                             'dimensions.'.format(x.ndim))
+            raise ValueError(
+                f'Input images should have 4 dimensions, here receive input with {x.ndim} dimensions.'
+            )
+
 
         x = (x.clone() * 127.5 + 128).clamp(0, 255).to(torch.uint8)
         x_np = [x_.permute(1, 2, 0).detach().cpu().numpy() for x_ in x]
@@ -1296,14 +1295,16 @@ class PPL(Metric):
         Returns:
             Object: A sampler for calculating path length regularization.
         """
-        if sample_model == 'ema':
-            generator = model.generator_ema
-        else:
-            generator = model.generator
-        ppl_sampler = PPLSampler(generator, self.num_images, batch_size,
-                                 self.space, self.sampling, self.epsilon,
-                                 self.latent_dim)
-        return ppl_sampler
+        generator = model.generator_ema if sample_model == 'ema' else model.generator
+        return PPLSampler(
+            generator,
+            self.num_images,
+            batch_size,
+            self.space,
+            self.sampling,
+            self.epsilon,
+            self.latent_dim,
+        )
 
 
 class PPLSampler:
@@ -1460,7 +1461,7 @@ class GaussianKLD(Metric):
         require_keys = [
             'mean_pred', 'mean_target', 'logvar_pred', 'logvar_target'
         ]
-        if any([k not in batch for k in require_keys]):
+        if any(k not in batch for k in require_keys):
             raise KeyError(f'The input dict must require {require_keys} at '
                            'the same time. But keys in the given dict are '
                            f'{batch.keys()}. Some of the requirements are '

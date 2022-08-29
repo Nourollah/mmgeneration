@@ -42,12 +42,7 @@ def extract_inception_features(dataloader,
         # implementation, unconditioanl dataset will return real images with
         # the key "real_img". However, the conditional dataset contains a key
         # "img" denoting the real images.
-        if 'real_img' in data:
-            # Mainly for the unconditional dataset in our MMGeneration
-            img = data['real_img']
-        else:
-            # Mainly for conditional dataset in MMClassification
-            img = data['img']
+        img = data['real_img'] if 'real_img' in data else data['img']
         pbar.update()
 
         # the inception network is not wrapped with module wrapper.
@@ -121,8 +116,7 @@ def get_gaussian_kernel():
     kernel = np.array([[1, 4, 6, 4, 1], [4, 16, 24, 16, 4], [6, 24, 36, 24, 6],
                        [4, 16, 24, 16, 4], [1, 4, 6, 4, 1]],
                       np.float32) / 256.0
-    gaussian_k = torch.as_tensor(kernel.reshape(1, 1, 5, 5))
-    return gaussian_k
+    return torch.as_tensor(kernel.reshape(1, 1, 5, 5))
 
 
 def get_pyramid_layer(image, gaussian_k, direction='down'):
